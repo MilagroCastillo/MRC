@@ -1,0 +1,106 @@
+﻿@page "/edit-customer/{Id:int}"
+
+@using CRM.DTOs.CustomerDTOs;
+@using Microsoft.AspNetCore.Components.Forms;
+@using System.ComponentModel.DataAnnotations;
+@using CRM.AppWebBlazor.Data;
+
+@if (isSuccess == false && isError== false)
+{
+    <h3>Modificar Cliente</h3>
+
+    <EditForm Model="customer" OnValidSubmit="Edit">
+        <DataAnnotationsValidator/>
+        <div class="row">
+            <div class="col-4">
+                <div class="form-group">
+                    <label for="Name">Nombre:</label>
+                    <InputText class="form-control" @bind-Value="customer.Name"/>
+                    <ValidationMessage For="() => customer.Name"/>
+                </div>
+            </div>
+            <div class="col-4">
+                <div class="form-group">
+                    <label for="LastName">Apellido:</label>
+                    <InputText class="form-control" @bind-Value="customer.LastName"/>
+                    <ValidationMessage For="() => customer.LastName"/>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-12">
+                <div class="form-group">
+                    <label for="Address">Direccion:</label>
+                    <InputText class="form-control" @bind-Value="customer.Address"/>
+                    <ValidationMessage For="() => customer.Address"/>
+                </div>
+            </div>
+        </div>
+        <br>
+        <div class="row">
+            <div class="col-12">
+                <button type="submit" class="btn btn-primary">Modificar</button>
+                <NavLink href="/customer-list" class="btn btn-secondary">Cancelar</NavLink>
+            </div>
+        </div>
+
+    </EditForm>
+
+}
+else if (isSuccess)
+{
+    customer = new EditCustomerDTO();
+    isError = false;
+    <p class="alert alert-seccess">Cliente se modifico con exito</p>
+    <NavLink href="/customer-list" class="btn btn-primary">Aceptar</NavLink>
+}
+else if (isError)
+{
+    <p class="alert alert-error">Sucedio un error al intentar modificar . o no ha realizado ninguna modificacioon al registro actual</p>
+    <NavLink href="/customer-list" class="btn btn-primary">Aceptar</NavLink>
+}
+@code {
+    // declaracion de un parametro llamado"Id" que puede ser pasado al componente
+    [Parameter]
+    public int Id { get; set; }
+
+    //Inyeccion de depedencias de CustomerService para
+    // acceder a los servicios relacionados con los clientes
+    [Inject]
+    CustomerService customerService { get; set; }
+
+    // declaracion e inicializacion de un objeto "customer"
+    //para almacenar los datalles del cliente
+    EditCustomerDTO customer = new EditCustomerDTO();
+
+    //declaracion de variable booleanas para manejar el estado de exito y error
+    bool isSuccess = false;
+    bool isError = false;
+
+    //metodo que se llama cuando se inicializa el componente
+    protected override async Task OnInitializedAsync()
+    {
+        //realiza una llamada asincronica para obtener 
+        //detalles del cliente por su Id
+        var customerDetail = await customerService.GetById(Id);
+
+        //inicializa el objeto "customer" con los detalles del cliente obtenidos
+        customer = new EditCustomerDTO(customerDetail);
+    }
+    //metodo para editar el cliente
+    private async Task Edit()
+    {
+        //realiza una llamada asicronica para editar la informacion del cliente
+        int result = await customerService.Edit(customer);
+
+        // verifica si el resultado de la edicion es diferente
+        //de cero(exito) o igual a cero (error)
+
+        if (result != 0)
+            isSuccess = true;
+        else
+            isError = true;
+
+
+    }
+}

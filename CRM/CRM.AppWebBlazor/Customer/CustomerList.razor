@@ -1,0 +1,218 @@
+﻿@page "/customer-list"
+@using CRM.DTOs.CustomerDTOs;
+@using System.Text.Json;
+@using Microsoft.AspNetCore.Components;
+@using Microsoft.AspNetCore.Components.Forms;
+@using CRM.AppWebBlazor.Data;
+<h3>Buscar Cliente</h3>
+<EditForm Model="searchQuery" OnValidSubmit = "SubmitSearch">
+    <div class="row">
+        <div class="col-3">
+            <div class="form-group">
+                <label form="Name">Nombre:</label>
+                <InputText class="form-control" @bind-Value="searchQuery.Name_Like" />                             
+            </div>
+        </div>
+        <div class="col-3">
+            <div class="form-group">
+                <label for="Name">Apellido:</label>
+                <InputText class="form-control" @bind-Value="searchQuery.LatName_Like" />
+            </div>
+        </div>
+        <div class="col-2">
+            <div class="form-group">
+                <label for="Take">CantReg X Pagina</label>
+                <select class="form-control" @bind="searchQuery.Take">
+                    @for (var i=10; i<100; i+=10)
+                    {
+                        <option value="@i">@i</option>
+                    }
+                </select>
+            </div>
+        </div>
+    </div>
+    <br />
+    <button type="submit" class="btn btn-primary">Buscar</button>
+    <NavLink href="/create-customer" class="btn btn-secondary">Ir a crear</NavLink>
+    <br />
+</EditForm>
+<h3>Lista de clientes</h3>
+<div class="row" style="overflow:auto !important;max-width:600px">
+    <nav arial-label="Page navigation example">
+        <ul class="Pagination">
+            <li class="page-item">
+                <NavLink class="page-link" @onclick="async () => await PaginatioSearch(SkipAnte)">Anterior</NavLink>
+            </li>
+            @foreach (var item in paginations)
+            {
+                if (item.Skip != searchQuery.Skip)
+                {
+                    <li class="page-item">
+                        <NavLink class="page-link" @onclick="async () => await PaginatioSearch(item.Skip)">@item.NumPage</NavLink>
+                    </li>
+                }
+                else
+                {
+                   <li class="page-item active">
+                        <NavLink class="page-link active" @onclick="async () => await PaginatioSearch(item.Skip)">@item.NumPage</NavLink>
+                    </li>
+                }
+            }
+            <NavLink class="page-link" @onclick="async () => await PaginatioSearch(skipSi)">Siguiente</NavLink>
+        </ul>
+    </nav>
+</div>
+<div class="row-cols-6">
+    <span>Total registros: @serchResult.CountRow</span>
+</div>
+@if (serchResult !=null && serchResult.Data !=null && serchResult.Data.Count >0)
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Nombre</th>
+                <th>Apellido</th>
+                <th>Direccion</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var customer in serchResult.Data)
+            {
+                <tr>
+                    <td>@customer.Name</td>
+                    <td>@customer.LastName</td>
+                    <td>@customer.Address</td>
+                    <td>
+                        <button class="btn btn-dark"@onclick="()=>GoEdit(customer.Id)">Edit</button>
+                        <button class="btn btn-info"@onclick="()=>GoDetails(customer.Id)">Ver</button>
+                        <button class="btn btn-danger"@onclick="()=> GoDelete(customer.Id)">Eliminar</button>
+                    </td>
+                </tr>
+                
+            }
+        </tbody>
+    </table>
+}
+@code {
+    // Inyeccion de depedencias de CustomerService y NavigationManager
+    [Inject]
+    CustomerService customerService{ get; set; }
+    [Inject]
+    NavigationManager navigation{ get; set; }
+
+    //declaracion e inicializacion de objetos y variables
+    SerchResultCustomerDTO serchResult = new SerchResultCustomerDTO();
+    SearchQueryCustomerDTO searchQuery = new SearchQueryCustomerDTO { Take = 10 };
+    List<Pagination> paginations = new List<Pagination>();
+    int SkipAnte = 0;
+    int skipSi = 0;
+
+     //meodo para realizar una busqueda
+    private async Task Search()
+    {
+        serchResult = await customerService.Search(searchQuery);
+    }
+    // metodo que se llama cuando se inicializa un componenete
+    /*
+    * Se utiliza para realizar inicializaciones o tareas 
+    * cuando se carga una pagina o componenete de Blazor
+    * Este metodo se llama automaticamente cuando el componente se esta inicializando
+    * antes de que se muestre en la interfaz de usuario
+    */
+    protected override async Task OnInitializedAsync()
+    {
+        //configuracion inicial de la busqueda 
+        searchQuery.SendRowCount = 2;
+        searchQuery.Skip = 0;
+
+        //realizar la busqueda inicial
+        await Search();
+
+        //actualizar la paginacion
+        UpdatePagination();
+    }
+
+    //metodo para realizar una busqueda despues de una accion de busqueda
+    private async Task SubmitSearch()
+     {
+        // configuracion de la busqueda
+        searchQuery.SendRowCount = 2;
+        searchQuery.Skip = 0;
+
+        // realizar la busqueda 
+        await Search();
+        //actualizar la paginacion
+        UpdatePagination();
+    }
+    //metodo para realizar una busqueda paginada
+    private async Task PaginatioSearch(int skip)
+    {
+        //almacenar temporalmente la cantidad de filas de resultados
+        int countRowTemp = serchResult.CountRow;
+
+        //configuracion de la busqueda paginada
+        searchQuery.SendRowCount = 1;
+        searchQuery.Skip = skip;
+
+        //Realizar la busqueda paginada
+        await Search();
+
+        // restaurar la cantidad de filas original
+        serchResult.CountRow = countRowTemp;
+
+        //actualizar la paginacion
+        UpdatePagination();
+    }
+    //Metodos para navegar a las paginas de edicion, detalles y eliminacion
+    private void GoEdit(int customerId)
+    {
+        navigation.NavigateTo($"/edit-customer/{customerId}");
+    }
+    private void GoDetails(int customerId)
+    {
+        navigation.NavigateTo($"/customer-details/{customerId}");
+    }
+    private void GoDelete(int customerId)
+    {
+        navigation.NavigateTo($"/delete-customer/{customerId}");
+    }
+    //metodo para actualizar la lista de paginacion
+    private void UpdatePagination()
+    {
+        //inicializar la lista de paginacion
+        paginations = new List<Pagination>();
+
+        // calcular el numero total de paginas
+        int totalPages = (int)Math.Ceiling((double)serchResult.CountRow / searchQuery.Take);
+
+        // calcular el valor de skipAnte y skipSi
+        SkipAnte = searchQuery.Skip > 0 ? searchQuery.Skip - searchQuery.Take : 0;
+        int skipMax = 0;
+
+        // generar objetos de paginacion y agregarlos a la lista
+        for(var i=0; i < totalPages; i++)
+        {
+            var pagination = new Pagination()
+                {
+                    Skip = 1 * searchQuery.Take,
+                    NumPage = i + 1
+                };
+              paginations.Add(pagination);
+            skipMax = pagination.Skip;
+        }
+        //Calcular el valor de skipSi
+        skipSi = searchQuery.Skip + searchQuery.Take;
+        skipSi = skipSi > skipMax ? skipSi - searchQuery.Take : skipSi;
+
+    }
+    // clase para representar la informacion de paginacion
+    class Pagination
+    {
+        public int NumPage { get; set; }
+        public int Skip { get; set; }
+    }
+
+}
+
+

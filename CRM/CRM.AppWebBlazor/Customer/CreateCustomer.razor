@@ -1,0 +1,90 @@
+﻿@page "/create-customer"
+@using CRM.DTOs.CustomerDTOs
+@using Microsoft.AspNetCore.Components.Forms
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Components;
+@using CRM.AppWebBlazor.Data;
+
+@if (isSuccess == false && isError == false)
+{
+
+
+    <h3>Crear un nuevo cliente</h3>
+
+    <EditForm Model="customer" OnInvalidSubmit="Create">
+        <DataAnnotationsValidator/>
+        <div class="row">
+            <div class="col-4">
+                <div class="form-group">
+                    <label for="Name">Nombre:</label>
+                    <InputText class="form-control" id="Name" @bind-Value="customer.Name"/>
+                    <ValidationMessage For="()=> customer.Name" />
+                </div>
+            </div>
+            <div class="col-4">
+                <div class="form-group">
+                    <label for="LastName">Apellido:</label>
+                    <InputText class="form-control" id="LastName" @bind-Value="customer.LastName"/>
+                    <ValidationMessage For="() => customer.LastName" />
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-12">
+                <div class="form-group">
+                    <label for="Address">Direccion:</label>
+                    <InputTextArea class="form-control" id="Address" @bind-Value="customer.Address"/>
+                    <ValidationMessage For="() => customer.Address" />
+                </div>
+            </div>
+        </div>
+        <br>
+        <div class="row">
+            <div class="col-12">
+                <button type="submit" class="btn btn-primary">Guardar</button>
+                <NavLink href="/customer-list" class="btn btn-secondary">Cancelar</NavLink>
+            </div>
+        </div>
+
+    </EditForm>
+
+}
+else if (isSuccess)
+{
+    customer = new CreateCustomerDTO();
+    isError = false;
+    <p class="alert alert-success">Cliente creado con exito</p>
+    <button type="button" @onclick="GoCreate" class="btn btn-primary">Ir a crear</button>
+    <NavLink href="/customer-list" class="btn btn-primary">Ir a buscar clientes</NavLink>
+ 
+}
+else if (isSuccess)
+{
+    <p class="alert alert-success"> sucedio un error al intentar registrar</p>
+    <NavLink href="/customer-list" class="btn btn-primary">Aceptar</NavLink>
+}
+@code {
+    // inyeccion de depedencias de CustomerService para acceder a sus metodos
+    [Inject]
+    CustomerService customerService { get; set; }
+
+    //creacion de una instancia de CreateCustomerDTO para crear un cliente
+    CreateCustomerDTO customer = new CreateCustomerDTO();
+    bool isSuccess = false; // variable para rastear si la operacion fue exitosa
+    bool isError = false; //variable para rastrear  si se produjo un error
+
+    private async Task Create()
+    {
+        // llama al metodo Create de CustomerService para crear un cliente
+        int result = await customerService.Create(customer);
+        if (result != 0) // comprueba si el resultado de la operacion es diferente de 0(indicando exito)
+            isSuccess = true; // establece isError en true si la operacion fue exitosa
+        else
+            isError = true;// establece isError en true si la operacion resulto en un error
+    }
+    private void GoCreate()
+    {
+        isSuccess = false;//restablece isSuccess a false, utilizado para limpiar el estado de exito
+        isError = false; // restablecer isError a false, utilizando para limpiar el estado de error
+    }
+}
